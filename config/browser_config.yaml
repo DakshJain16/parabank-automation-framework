@@ -1,0 +1,8 @@
+qa:
+  baseurl: 'https://parabank.parasoft.com'
+  username: dj16
+  password: password123
+dev:
+  baseurl: 'https://parabank.parasoft.com'
+  username: dj16
+  password: password123
