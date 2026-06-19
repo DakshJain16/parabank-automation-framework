@@ -24,6 +24,9 @@ report.html
 debug.log
 *.robotdebug
 
+# Pabot
+.pabotsuitenames
+
 # ================================
 # ROBOTMETRICS OUTPUT
 # ================================
