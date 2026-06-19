@@ -13,5 +13,4 @@ TC-NEG-01 Login With Non-Existent User
 
     Login User    invalidUser123    invalidPass123
 
-    Page Should Contain    
-    ...    The username and password could not be verified.
+    Wait Until Page Contains    The username and password could not be verified.    10s
