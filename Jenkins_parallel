@@ -56,11 +56,18 @@ pipeline {
             steps {
                 echo "==== Installing dependencies ===="
                 sh '''
+                    set -x
+
                     source $VENV_DIR/bin/activate
 
                     pip install -r requirements.txt
 
-                    python -m robot --version
+                    which python
+                    which robot
+
+                    robot --version
+
+                    echo "Install stage completed"
                 '''
             }
         }
