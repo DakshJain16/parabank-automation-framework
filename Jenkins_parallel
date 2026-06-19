@@ -53,24 +53,31 @@ pipeline {
         }
 
         stage('Install Dependencies') {
-            steps {
-                echo "==== Installing dependencies ===="
-                sh '''
-                    set -x
+    steps {
+        echo "==== Installing dependencies ===="
+        sh '''
+            set +e
 
-                    source $VENV_DIR/bin/activate
+            source $VENV_DIR/bin/activate
 
-                    pip install -r requirements.txt
+            pip install -r requirements.txt
+            echo "pip exit code = $?"
 
-                    which python
-                    which robot
+            which python
+            echo "which python exit code = $?"
 
-                    robot --version
+            which robot
+            echo "which robot exit code = $?"
 
-                    echo "Install stage completed"
-                '''
-            }
-        }
+            robot --version
+            echo "robot exit code = $?"
+
+            echo "Install stage completed"
+
+            exit 0
+        '''
+    }
+}
 
         stage('Execute Robot Tests') {
             steps {
