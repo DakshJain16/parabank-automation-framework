@@ -1,7 +1,7 @@
-// Jenkinsfile - Declarative Pipeline for Robot Framework on Windows agents
 pipeline {
     agent any
 
+    ```
     options {
         timestamps()
         skipDefaultCheckout(false)
@@ -9,289 +9,271 @@ pipeline {
     }
 
     environment {
-        // Use workspace-relative names only; never hardcode drive letters or paths
-        VENV_DIR     = "venv"
-        OUTPUT_DIR   = "output"
-        REQ_FILE     = "requirements.txt"
-        TESTS_DIR    = "tests"
-        ALLURE_RESULTS = "output\\allure-results"
-        ALLURE_REPORT  = "output\\allure-report"
+        VENV_DIR       = "venv"
+        OUTPUT_DIR     = "output"
+        REQ_FILE       = "requirements.txt"
+        TESTS_DIR      = "tests"
+        ALLURE_RESULTS = "output/allure-results"
+        ALLURE_REPORT  = "output/allure-report"
     }
 
     stages {
 
-        // -------------------------------------------------------------
-        // Stage 1: Checkout source code from GitHub
-        // -------------------------------------------------------------
         stage('Checkout') {
             steps {
                 echo "==== Checking out source code from SCM ===="
                 checkout scm
-                echo "Checkout complete. Workspace: %WORKSPACE%"
+                sh 'echo "Checkout complete. Workspace: $WORKSPACE"'
             }
         }
 
-        // -------------------------------------------------------------
-        // Stage 2: Validate project structure before doing any work
-        // -------------------------------------------------------------
         stage('Validate Project Structure') {
             steps {
                 echo "==== Validating project structure ===="
-                bat """
-                    @echo off
-                    if not exist "%REQ_FILE%" (
-                        echo ERROR: requirements.txt not found in project root.
-                        exit /b 1
-                    )
-                    if not exist "%TESTS_DIR%" (
-                        echo ERROR: tests directory not found in project root.
-                        exit /b 1
-                    )
-                    echo Validation passed: requirements.txt and tests directory found.
-                """
+                sh '''
+                    if [ ! -f "$REQ_FILE" ]; then
+                        echo "ERROR: requirements.txt not found."
+                        exit 1
+                    fi
+
+                    if [ ! -d "$TESTS_DIR" ]; then
+                        echo "ERROR: tests directory not found."
+                        exit 1
+                    fi
+
+                    echo "Validation passed."
+                '''
             }
         }
 
-        // -------------------------------------------------------------
-        // Stage 3: Setup Python virtual environment (create/repair)
-        // -------------------------------------------------------------
         stage('Setup Python Environment') {
             steps {
                 echo "==== Setting up Python virtual environment ===="
-                bat """
-                    @echo off
-                    set VENV_PY="%WORKSPACE%\\%VENV_DIR%\\Scripts\\python.exe"
+                sh '''
+                    VENV_PY="$WORKSPACE/$VENV_DIR/bin/python"
 
-                    if exist "%VENV_DIR%" (
-                        echo Virtual environment folder found. Verifying integrity...
-                        if not exist %VENV_PY% (
-                            echo Virtual environment appears corrupted. Recreating...
-                            rmdir /s /q "%VENV_DIR%"
-                        )
-                    )
+                    if [ -d "$VENV_DIR" ]; then
+                        echo "Virtual environment found. Verifying..."
+                        if [ ! -f "$VENV_PY" ]; then
+                            echo "Virtual environment corrupted. Recreating..."
+                            rm -rf "$VENV_DIR"
+                        fi
+                    fi
 
-                    if not exist "%VENV_DIR%" (
-                        echo Creating new virtual environment...
-                        python -m venv "%VENV_DIR%"
-                        if errorlevel 1 (
-                            echo ERROR: Failed to create virtual environment. Is Python installed and on PATH?
-                            exit /b 1
-                        )
-                    ) else (
-                        echo Existing virtual environment is valid. Reusing it.
-                    )
+                    if [ ! -d "$VENV_DIR" ]; then
+                        echo "Creating virtual environment..."
+                        python3 -m venv "$VENV_DIR"
 
-                    echo Upgrading pip...
-                    call "%VENV_DIR%\\Scripts\\activate.bat"
+                        if [ $? -ne 0 ]; then
+                            echo "ERROR: Failed to create virtual environment."
+                            exit 1
+                        fi
+                    else
+                        echo "Reusing existing virtual environment."
+                    fi
+
+                    source "$VENV_DIR/bin/activate"
+
                     python -m pip install --upgrade pip
-                    if errorlevel 1 (
-                        echo ERROR: Failed to upgrade pip.
-                        exit /b 1
-                    )
-                    echo Pip upgrade complete.
-                """
+
+                    if [ $? -ne 0 ]; then
+                        echo "ERROR: Failed to upgrade pip."
+                        exit 1
+                    fi
+                '''
             }
         }
 
-        // -------------------------------------------------------------
-        // Stage 4: Install project dependencies from requirements.txt
-        // -------------------------------------------------------------
         stage('Install Dependencies') {
             steps {
-                echo "==== Installing dependencies from requirements.txt ===="
-                bat """
-                    @echo off
-                    call "%VENV_DIR%\\Scripts\\activate.bat"
+                echo "==== Installing dependencies ===="
+                sh '''
+                    source "$VENV_DIR/bin/activate"
 
-                    pip install -r "%REQ_FILE%"
-                    if errorlevel 1 (
-                        echo ERROR: Failed to install dependencies from requirements.txt.
-                        exit /b 1
-                    )
-                    echo Dependencies installed successfully.
+                    pip install -r "$REQ_FILE"
 
-                    echo Verifying Robot Framework installation...
+                    if [ $? -ne 0 ]; then
+                        echo "ERROR: Dependency installation failed."
+                        exit 1
+                    fi
+
                     python -m robot --version
+
                     python -c "import robot; print('Robot Framework module OK:', robot.__file__)"
-                    if errorlevel 1 (
-                        echo ERROR: Robot Framework is not installed or not accessible in the virtual environment.
-                        exit /b 1
-                    )
-                    echo Robot Framework verification successful.
-                """
+
+                    if [ $? -ne 0 ]; then
+                        echo "ERROR: Robot Framework verification failed."
+                        exit 1
+                    fi
+                '''
             }
         }
 
-        // -------------------------------------------------------------
-        // Stage 5: Execute all Robot Framework tests recursively
-        // -------------------------------------------------------------
         stage('Execute Robot Tests') {
-            steps {
-                echo "==== Executing Robot Framework tests ===="
-                bat """
-                    @echo off
-                    call "%VENV_DIR%\\Scripts\\activate.bat"
+        steps {
+        echo "==== Executing Robot Framework tests ===="
 
-                    if exist "%OUTPUT_DIR%" (
-                        echo Cleaning previous output directory...
-                        rmdir /s /q "%OUTPUT_DIR%"
-                    )
-                    mkdir "%OUTPUT_DIR%"
+        ```
+            script {
+                int robotExitCode = sh(
+                    script: '''
+                        source "$VENV_DIR/bin/activate"
 
-                    echo Running Robot Framework tests from "%TESTS_DIR%" (recursive)...
-                    python -m robot --outputdir "%OUTPUT_DIR%" --listener allure_robotframework:%ALLURE_RESULTS% "%TESTS_DIR%"
+                        rm -rf "$OUTPUT_DIR"
+                        mkdir -p "$OUTPUT_DIR"
+                        mkdir -p "$ALLURE_RESULTS"
 
-                    set RC=%ERRORLEVEL%
-                    echo Robot Framework execution finished with exit code %RC%.
+                        python -m robot \
+                            --outputdir "$OUTPUT_DIR" \
+                            --listener allure_robotframework:$ALLURE_RESULTS \
+                            "$TESTS_DIR"
 
-                    rem Robot exit codes > 0 may indicate failed tests; do not hard-fail the
-                    rem pipeline here so reports can still be published. Capture status only.
-                    exit /b 0
-                """
+                        exit $?
+                    ''',
+                    returnStatus: true
+                )
+
+                echo "Robot execution completed with exit code ${robotExitCode}"
+
+                if (robotExitCode > 0 && robotExitCode < 250) {
+                    currentBuild.result = 'UNSTABLE'
+                    echo "Some Robot Framework test cases failed."
+                }
+                else if (robotExitCode >= 250) {
+                    error("Robot Framework execution error. Exit code: ${robotExitCode}")
+                }
             }
         }
+        ```
+        }
 
-        // -------------------------------------------------------------
-        // Stage 6: Publish Robot Framework metrics (plugin-aware)
-        // -------------------------------------------------------------
+
         stage('Publish Reports') {
             steps {
                 echo "==== Publishing Robot Framework reports ===="
                 script {
-                    def outputXml = "${env.OUTPUT_DIR}\\output.xml"
+                    def outputXml = "${env.OUTPUT_DIR}/output.xml"
 
                     if (fileExists(outputXml)) {
                         try {
-                            // Attempt to use the Robot Framework plugin if installed
                             step([
-                                $class            : 'RobotPublisher',
-                                outputPath        : "${env.OUTPUT_DIR}",
-                                outputFileName    : 'output.xml',
-                                reportFileName    : 'report.html',
-                                logFileName       : 'log.html',
+                                $class: 'RobotPublisher',
+                                outputPath: "${env.OUTPUT_DIR}",
+                                outputFileName: 'output.xml',
+                                reportFileName: 'report.html',
+                                logFileName: 'log.html',
                                 disableArchiveOutput: false,
-                                passThreshold     : 0,
-                                unstableThreshold : 0,
-                                otherFiles        : ''
+                                passThreshold: 0,
+                                unstableThreshold: 0,
+                                otherFiles: ''
                             ])
-                            echo "Robot Framework plugin metrics published successfully."
-                        } catch (NoSuchMethodError | Exception err) {
-                            echo "WARNING: Robot Framework plugin not available or failed (${err.toString()})."
-                            echo "Falling back to archiving HTML reports only."
+
+                            echo "Robot Framework reports published."
+                        } catch (Exception err) {
+                            echo "Robot Plugin unavailable. Using artifact archive only."
                         }
                     } else {
-                        echo "WARNING: output.xml not found. Skipping Robot Framework metrics publishing."
+                        echo "output.xml not found."
                     }
                 }
             }
         }
+
         stage('Generate Allure Report') {
             steps {
-                echo "==== Generating Allure HTML report ===="
-                bat """
-                    @echo off
-                    if not exist "%ALLURE_RESULTS%" (
-                        echo WARNING: Allure results not found. Skipping Allure report generation.
-                        exit /b 0
-                    )
+                echo "==== Generating Allure report ===="
+                sh '''
+                    if [ ! -d "$ALLURE_RESULTS" ]; then
+                        echo "No Allure results found."
+                        exit 0
+                    fi
 
-                    where allure >nul 2>nul
-                    if errorlevel 1 (
-                        echo WARNING: allure command not found on PATH. Skipping Allure report generation.
-                        exit /b 0
-                    )
+                    if ! command -v allure >/dev/null 2>&1; then
+                        echo "Allure command not installed."
+                        exit 0
+                    fi
 
-                    allure generate "%ALLURE_RESULTS%" -o "%ALLURE_REPORT%" --clean --single-file
-                    if errorlevel 1 (
-                        echo WARNING: allure generate failed. Continuing pipeline.
-                    ) else (
-                        echo Allure report generated successfully at %ALLURE_REPORT%
-                    )
-
-                    exit /b 0
-                """
+                    allure generate "$ALLURE_RESULTS" \
+                        -o "$ALLURE_REPORT" \
+                        --clean \
+                        --single-file || true
+                '''
             }
         }
 
         stage('Generate Robot Metrics') {
             steps {
-                echo "==== Generating Robot Framework Metrics report ===="
-                bat """
-                    @echo off
-                    call "%VENV_DIR%\\Scripts\\activate.bat"
+                echo "==== Generating Robot Metrics ===="
+                sh '''
+                    source "$VENV_DIR/bin/activate"
 
-                    if not exist "%OUTPUT_DIR%\\output.xml" (
-                        echo WARNING: output.xml not found. Skipping metrics generation.
-                        exit /b 0
-                    )
+                    if [ ! -f "$OUTPUT_DIR/output.xml" ]; then
+                        echo "output.xml not found. Skipping metrics."
+                        exit 0
+                    fi
 
-                    robotmetrics -I "%OUTPUT_DIR%"
-                    if errorlevel 1 (
-                        echo WARNING: robotmetrics failed to generate report. Continuing pipeline.
-                    ) else (
-                        echo Robot Framework Metrics report generated successfully.
-                    )
-
-                    rem Always exit 0 so this optional/non-critical stage never fails the build
-                    exit /b 0
-                """
+                    robotmetrics -I "$OUTPUT_DIR" || true
+                '''
             }
         }
 
-        // -------------------------------------------------------------
-        // Stage 7: Archive generated reports and logs as artifacts
-        // -------------------------------------------------------------
         stage('Archive Artifacts') {
             steps {
-                echo "==== Archiving reports and logs as Jenkins artifacts ===="
+                echo "==== Archiving reports ===="
                 script {
                     if (fileExists("${env.OUTPUT_DIR}")) {
-                        archiveArtifacts artifacts: "${env.OUTPUT_DIR}/**/*.*", allowEmptyArchive: true, fingerprint: false
-                        echo "Artifacts archived from '${env.OUTPUT_DIR}' directory."
+                        archiveArtifacts(
+                            artifacts: "${env.OUTPUT_DIR}/**/*.*",
+                            allowEmptyArchive: true,
+                            fingerprint: false
+                        )
+
+                        echo "Artifacts archived."
                     } else {
-                        echo "WARNING: Output directory not found. Nothing to archive."
+                        echo "Output directory not found."
                     }
                 }
             }
         }
     }
 
-    // -------------------------------------------------------------
-    // Post actions: always run, regardless of build result
-    // -------------------------------------------------------------
     post {
         always {
-            echo "==== Post-build: ensuring reports are collected and workspace is tidy ===="
+            echo "==== Post-build actions ===="
+
             script {
                 if (fileExists("${env.OUTPUT_DIR}")) {
-                    archiveArtifacts artifacts: "${env.OUTPUT_DIR}/**/*.*", allowEmptyArchive: true, fingerprint: false
-                    echo "Final archive step completed: reports preserved in '${env.OUTPUT_DIR}'."
-                } else {
-                    echo "No output directory found during post-build step."
+                    archiveArtifacts(
+                        artifacts: "${env.OUTPUT_DIR}/**/*.*",
+                        allowEmptyArchive: true,
+                        fingerprint: false
+                    )
                 }
             }
 
-            // Clean only transient cache/temp files; never remove the venv or output reports
-            bat """
-                @echo off
-                echo Cleaning up temporary pycache files (preserving venv and output)...
-                for /d /r %WORKSPACE% %%d in (__pycache__) do (
-                    if exist "%%d" rmdir /s /q "%%d"
-                )
-                echo Cleanup complete.
-            """
+            sh '''
+                echo "Cleaning __pycache__ directories..."
+
+                find "$WORKSPACE" \
+                    -type d \
+                    -name "__pycache__" \
+                    -exec rm -rf {} +
+
+                echo "Cleanup complete."
+            '''
         }
 
         success {
-            echo "==== Build completed successfully. Robot Framework reports are available as artifacts. ===="
+            echo "==== Build completed successfully ===="
         }
 
         unstable {
-            echo "==== Build is UNSTABLE. Some Robot Framework tests likely failed. Check report.html and log.html. ===="
+            echo "==== Build UNSTABLE - Some tests failed ===="
         }
 
         failure {
-            echo "==== Build FAILED. Review the console log above for the failing stage and error details. ===="
+            echo "==== Build FAILED ===="
         }
     }
+    ```
 }
