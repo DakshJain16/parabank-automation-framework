@@ -1,7 +1,0 @@
-datasources:cbb072785195c4c01fa21ca596d53a82bb0ee8cb
-commandlineoptions:5ea3922db11a42de3fa4c89e9d9f06972f891d9e
-suitesfrom:no-suites-from-option
-file:84440a644e30449fb30ca3d70aa1da2fead791fa
---suite E2E.TC-E2E-01
---suite E2E.TC-E2E-02
---suite E2E.TC-E2E-03
