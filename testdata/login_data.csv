@@ -1,0 +1,6 @@
+*** Test Cases ***,${UserFirstname},${UserLastname},${UserAddress},${UserCity},${UserState},${UserZipcode},${Phno},${UserSSN},${User_name},${User_Pwd},${Confirm}
+Register alexturner,Alex,Turner,"12 Birchwood Court",Denver,CO,80202,9012345678,234567,alexturner,Test@321,Test@321
+Register priyam,Priya,Mehta,"88 Lakeview Terrace",Austin,TX,73301,9012345679,345678,priyam,Test@322,Test@322
+Register ryancole,Ryan,Cole,"540 Sunset Boulevard",Phoenix,AZ,85001,9012345680,456789,ryancole,Test@323,Test@323
+Register lindaortiz,Linda,Ortiz,"77 Harbor View Way",Boston,MA,02108,9012345681,567890,lindaortiz,Test@324,Test@324
+Register kevinparker,Kevin,Parker,"305 Willow Creek Dr",Portland,OR,97201,9012345682,678901,kevinparker,Test@325,Test@325

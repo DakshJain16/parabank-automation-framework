@@ -18,6 +18,7 @@ build/
 # ================================
 reports/
 output/
+pabot_results/
 output.xml
 log.html
 report.html
