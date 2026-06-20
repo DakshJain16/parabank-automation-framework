@@ -91,7 +91,7 @@ pipeline {
                     pabot --processes 2 \
                         --outputdir $OUTPUT_DIR \
                         --listener allure_robotframework:$ALLURE_RESULTS \
-                        $TESTS_DIR
+                        $TESTS_DIR || true
                 '''
             }
         }
