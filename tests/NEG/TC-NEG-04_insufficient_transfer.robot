@@ -28,7 +28,7 @@ TC-NEG-04 Transfer API Insufficient Balance
     Log To Console    Status: ${response.status_code}
     Log To Console    Response: ${response.text}
 
-    Should Be Equal As Integers    ${response.status_code}    200
+    Should Not Be Equal As Integers   ${response.status_code}    200
 
 #    Should Not Contain
 #    ...    ${response.text}

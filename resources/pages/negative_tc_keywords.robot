@@ -42,5 +42,5 @@ Transfer Negative Amount
 Verify Negative Transfer Error Is Shown
     [Documentation]    checks whether page contains 'Error!'
     Sleep    2s
-    Page Should Contain
+    Page Should Not Contain
     ...    Transfer Complete!
