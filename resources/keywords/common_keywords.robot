@@ -30,6 +30,7 @@ Open Application
 
 Close Application
     [Documentation]  Closing the application
+    Capture Page Screenshot    screenshots/${TEST_NAME}.png
     Close All Browsers
 
 Ensure User Is Logged In
