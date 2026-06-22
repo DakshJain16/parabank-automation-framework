@@ -14,7 +14,7 @@ Create API Session
     ...    parabank
     ...    ${BASE_URL}
     ...    headers=${headers}
-    ...    verify=${False}
+    ...    verify=False
 
 Verify Account Exists
     [Arguments]    ${account_id}
