@@ -31,7 +31,7 @@ Get Customer Login
     ...    parabank
     ...    /parabank/services/bank/login/${username}/${password}
 
-    Should Be Equal As Strings    ${response.status_code}    200
+    Should Be Equal As Integers    ${response.status_code}    200
     ${body}=    Set Variable    ${response.json()}
     
     ${customer_id}=    Set Variable    ${body['id']}
